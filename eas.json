@@ -10,12 +10,18 @@
     },
     "preview": {
       "distribution": "internal",
+      "node": "20.19.4",
+      "cache": {
+        "disabled": true
+      },
       "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+        "NODE_ENV": "production"
       }
     },
     "production": {
-      "autoIncrement": true
+      "env": {
+        "NODE_ENV": "production"
+      }
     }
   },
   "submit": {
