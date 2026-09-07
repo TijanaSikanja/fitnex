@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../services/supabase';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Colors } from '../../constants/Colors';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useProfile } from '../../context/PorifleProvider';
+import { useGamification } from '../../context/GamificationProvider';
+import { LevelProgressCard } from '../../components/gamification/LevelProgressCard';
+import { AchievementsSection } from '../../components/gamification/AchievementsSection';
 
 const { width } = Dimensions.get('window');
 
@@ -35,13 +38,27 @@ const PRO_FEATURES = [
 
 export default function ProfileScreen() {
 const { profile, profileImage, dailyCalorieGoal, loading, todaySteps } = useProfile();
+  const { levelInfo, achievements, awardStepsGoal, awardPerfectDay } = useGamification();
   const [weeklyScores, setWeeklyScores] = useState<any[]>([]);
   const [showProModal, setShowProModal] = useState(false);
   const [todayScore, setTodayScore] = useState<any>(null);
+  const crossedStepsGoalRef = useRef(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+  // Kad brojač koraka (iz ProfileProvider-a) prvi put pređe dnevni cilj u
+  // ovoj sesiji, odmah osveži dnevni score (a time i proveri gejmifikaciju),
+  // bez čekanja da korisnik napusti i ponovo otvori Profile tab.
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (todaySteps >= 10000 && !crossedStepsGoalRef.current) {
+      crossedStepsGoalRef.current = true;
+      fetchData();
+    }
+  }, [todaySteps]);
 
 const fetchData = async () => {
   try {
@@ -74,19 +91,18 @@ const fetchData = async () => {
     setWeeklyScores(mapped);
 
     const todayStr = today.toISOString().split('T')[0];
-    const todayData = scoresData?.find(s => s.date === todayStr);
-    if (!todayData) {
-      await generateTodayScore(user.id, todayStr, profile); // ← profile iz context-a
-    } else {
-      setTodayScore(todayData);
-    }
+    const prevTodayRow = scoresData?.find(s => s.date === todayStr) || null;
+    // Score dana se UVEK preračunava iz stvarnih podataka (a ne samo jednom
+    // pri prvom otvaranju profila), da bi trening/obrok dodat kasnije istog
+    // dana odmah bio odražen — i da bi otključavanje dostignuća bilo tačno.
+    await refreshTodayScore(user.id, todayStr, prevTodayRow);
 
   } catch (error: any) {
     console.log(error.message);
   } 
 };
 
-  const generateTodayScore = async (userId: string, date: string, profileData: any) => {
+  const refreshTodayScore = async (userId: string, date: string, prevRow: any) => {
     try {
       // Proveri treninge danas
       const { data: workouts } = await supabase
@@ -96,25 +112,29 @@ const fetchData = async () => {
         .gte('created_at', `${date}T00:00:00`)
         .lte('created_at', `${date}T23:59:59`);
 
-      // Proveri ishranu danas
-      const { data: nutrition } = await supabase
-        .from('nutrition_logs')
+      // Proveri ishranu danas — ISPRAVKA: obroci se čuvaju u tabeli 'meals'
+      // (vidi choose-meal.tsx / scan-barcode.tsx), a ne u 'nutrition_logs'
+      // (ta tabela se nigde ne popunjava, pa je kalorijski deo score-a ranije
+      // uvek bio 0/netačan).
+      const { data: mealsToday } = await supabase
+        .from('meals')
         .select('calories')
         .eq('user_id', userId)
-        .gte('logged_at', `${date}T00:00:00`)
-        .lte('logged_at', `${date}T23:59:59`);
+        .gte('created_at', `${date}T00:00:00`)
+        .lte('created_at', `${date}T23:59:59`);
 
-      const totalCalories = nutrition?.reduce((sum, n) => sum + (n.calories || 0), 0) || 0;
-      const calorieGoal = profileData?.daily_calorie_goal || 2000;
+      const totalCalories = mealsToday?.reduce((sum, m) => sum + (m.calories || 0), 0) || 0;
+      const calorieGoal = dailyCalorieGoal || 2000;
 
       const workoutCompleted = (workouts?.length || 0) > 0;
       const caloriesCompleted = totalCalories >= calorieGoal * 0.8 && totalCalories <= calorieGoal * 1.2;
+      const stepsCompleted = todaySteps >= 10000;
 
-      // Scoring sistem
+      // Scoring sistem — F5: trening (40), kalorije (40), koraci (20)
       let score = 0;
       if (workoutCompleted) score += 40;
       if (caloriesCompleted) score += 40;
-      score += Math.min(20, Math.floor(totalCalories / calorieGoal * 20));
+      score += stepsCompleted ? 20 : Math.min(20, Math.floor((todaySteps / 10000) * 20));
 
       const { data: newScore } = await supabase
         .from('daily_scores')
@@ -123,13 +143,33 @@ const fetchData = async () => {
           date,
           calories_completed: caloriesCompleted,
           workout_completed: workoutCompleted,
-          steps_completed: false,
+          steps_completed: stepsCompleted,
           score,
         })
         .select()
         .single();
 
       setTodayScore(newScore);
+
+      // ── Gejmifikacija ──────────────────────────────────────────────────
+      // Poeni za trening/obrok se dodeljuju odmah na workout-detail.tsx i
+      // choose-meal.tsx/scan-barcode.tsx (u trenutku upisa). Ovde se
+      // dodeljuju SAMO poeni vezani za dnevni cilj koraka i "savršen dan" —
+      // i to samo kad detektujemo PRELAZAK false → true u odnosu na ono što
+      // je već bilo sačuvano u bazi (prevRow), da se izbegne duplo
+      // nagrađivanje pri ponovnom otvaranju ekrana.
+      const wasStepsCompleted = !!prevRow?.steps_completed;
+      const wasPerfectDay = !!(
+        prevRow?.workout_completed && prevRow?.calories_completed && prevRow?.steps_completed
+      );
+      const isPerfectDayNow = workoutCompleted && caloriesCompleted && stepsCompleted;
+
+      if (stepsCompleted && !wasStepsCompleted) {
+        awardStepsGoal();
+      }
+      if (isPerfectDayNow && !wasPerfectDay) {
+        awardPerfectDay();
+      }
     } catch (e: any) {
       console.log(e.message);
     }
@@ -198,6 +238,8 @@ const fetchData = async () => {
         </View>
 
         <View style={styles.body}>
+          {/* GEJMIFIKACIJA — NIVO I POENI */}
+          <LevelProgressCard levelInfo={levelInfo} />
 
           {/* FITNEX SCORE */}
           <View style={styles.scoreCard}>
@@ -308,6 +350,8 @@ const fetchData = async () => {
     </Text>
   </View>
 </View>
+          <AchievementsSection achievements={achievements} />
+          
           {/* LOGOUT */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color={Colors.error} />

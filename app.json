@@ -2,7 +2,7 @@
   "expo": {
     "name": "rmas-fitnex_2022_0387",
     "slug": "rmas-fitnex_2022_0387",
-    "scheme": "rmas-fitnex_2022_0387",
+    "scheme": "fitnex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { Colors } from '../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGamification } from '../context/GamificationProvider'; 
 
 const MEAL_TYPES = [
   { label: 'Breakfast', icon: 'egg-outline' },
@@ -18,6 +19,7 @@ const MEAL_TYPES = [
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
+  const { awardMealLogged } = useGamification();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -80,7 +82,9 @@ export default function ScanBarcodeScreen() {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from('meals').insert({
+    const { data: insertedMeal, error } = await supabase
+    .from('meals')
+    .insert({
       user_id: user?.id,
       meal_type: selectedType,
       name: product.name,
@@ -89,19 +93,26 @@ export default function ScanBarcodeScreen() {
       carbs_g: product.carbs_g,
       fat_g: product.fat_g,
       image_url: product.image_url,
-    });
+    })
+    .select()
+    .single();
 
-    setSaving(false);
+  setSaving(false);
 
-    if (!error) {
-      router.push({
-        pathname: '/(tabs)/nutrition',
-        params: { showModal: 'true' },
-      });
-    } else {
-      console.log('insert error:', error);
-      Alert.alert('Error', error.message);
+  if (!error) {
+    // Gejmifikacija: +15 XP za ulogovan obrok + provera dostignuća.
+    if (insertedMeal) {
+      awardMealLogged(insertedMeal.id);
     }
+
+    router.push({
+      pathname: '/(tabs)/nutrition',
+      params: { showModal: 'true' },
+    });
+  } else {
+    console.log('insert error:', error);
+    Alert.alert('Error', error.message);
+  }
   };
 
   // ── Result screen ─────────────────────────────

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { Colors } from '../constants/Colors';
+import { useGamification } from '../context/GamificationProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ type Exercise = {
 export default function WorkoutDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { awardWorkoutCompleted } = useGamification();
   
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -138,7 +140,9 @@ export default function WorkoutDetailScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      await supabase.from('workouts').insert({
+      const { data: insertedWorkout } = await supabase
+      .from('workouts')
+      .insert({
         user_id: user.id,
         catalog_id: workout.id,
         title: workout.title,
@@ -146,12 +150,18 @@ export default function WorkoutDetailScreen() {
         duration_minutes: workout.duration_minutes,
         calories_burned: workout.calories_burned,
         exercises_count: workout.exercises_count,
-      });
-      
-      setStarted(true);
-      startTimer();
-      
-      Alert.alert('🎉 Workout Started!', `${workout.title} has been started. Timer is running!`);
+      })
+      .select()
+      .single();
+
+    setStarted(true);
+    startTimer();
+
+    Alert.alert('🎉 Workout Started!', `${workout.title} has been started. Timer is running!`);
+
+    if (insertedWorkout) {
+      awardWorkoutCompleted(insertedWorkout.id);
+    }
     } catch (e) {
       Alert.alert('Error', 'Could not start workout.');
     } finally {
@@ -492,3 +502,8 @@ const styles = StyleSheet.create({
   },
   detailedBadgeText: { fontSize: 11, color: '#555', fontWeight: '600' },
 });
+
+
+
+
+

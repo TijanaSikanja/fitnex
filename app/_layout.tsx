@@ -10,6 +10,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { notificationService } from '../services/notifications';
 import { ProfileProvider } from '../context/PorifleProvider';
+import { GamificationProvider } from '../context/GamificationProvider';
+import { AchievementUnlockedModal } from '../components/gamification/AchievementUnlockedModal';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,12 +50,15 @@ export default function RootLayout() {
 
 
   return (
-<ProfileProvider> 
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+  <ProfileProvider>
+      <GamificationProvider>
+        <StatusBar style="auto" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+        <AchievementUnlockedModal />
+      </GamificationProvider>
     </ProfileProvider>
   );
 }

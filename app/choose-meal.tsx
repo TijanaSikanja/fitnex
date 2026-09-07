@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { Colors } from '../constants/Colors';
+import { useGamification } from '../context/GamificationProvider'; 
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ type Meal = {
 export default function ChooseMealScreen() {
   const router = useRouter();
   const { meal_type } = useLocalSearchParams<{ meal_type: string }>();
+  const { awardMealLogged } = useGamification(); 
   
   console.log('meal_type received:', meal_type);
 
@@ -62,21 +64,30 @@ const handleAddMeal = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   console.log('user:', user?.id);
   
-  const { error } = await supabase.from('meals').insert({
-    user_id: user?.id,
-    catalog_id: current.id,
-    meal_type,
-    name: current.name,
-    calories: current.calories,
-    protein_g: current.protein_g,
-    carbs_g: current.carbs_g,
-    fat_g: current.fat_g,
-    image_url: current.image_url,
-  });
+  const { data: insertedMeal, error } = await supabase
+    .from('meals')
+    .insert({
+      user_id: user?.id,
+      catalog_id: current.id,
+      meal_type,
+      name: current.name,
+      calories: current.calories,
+      protein_g: current.protein_g,
+      carbs_g: current.carbs_g,
+      fat_g: current.fat_g,
+      image_url: current.image_url,
+    })
+    .select()
+    .single();
 
   console.log('insert error:', error);
 
   if (!error) {
+    // Gejmifikacija: +15 XP za ulogovan obrok + provera dostignuća.
+    if (insertedMeal) {
+      awardMealLogged(insertedMeal.id);
+    }
+
     router.push({
       pathname: '/(tabs)/nutrition',
       params: { showModal: 'true' },
