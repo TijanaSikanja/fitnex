@@ -63,17 +63,29 @@ useEffect(() => {
 
 useEffect(() => {
   let subscription: any;
+  let historicalSteps = 0;
 
- const startPedometer = async () => {
-  const isAvailable = await Pedometer.isAvailableAsync();
-  console.log('Pedometer available:', isAvailable);
-  if (!isAvailable) return;
+  const startPedometer = async () => {
+    const isAvailable = await Pedometer.isAvailableAsync();
+    console.log('Pedometer available:', isAvailable);
+    if (!isAvailable) return;
 
-  subscription = Pedometer.watchStepCount(result => {
-    console.log('New steps:', result.steps);
-    setTodaySteps(prev => prev + result.steps);
-  });
-};
+    try {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const result = await Pedometer.getStepCountAsync(startOfToday, new Date());
+      historicalSteps = result?.steps || 0;
+      console.log('Historical steps today:', historicalSteps);
+      setTodaySteps(historicalSteps);
+    } catch (e: any) {
+      console.log('getStepCountAsync error:', e.message);
+    }
+
+    subscription = Pedometer.watchStepCount(result => {
+      console.log('Live steps this session:', result.steps);
+      setTodaySteps(historicalSteps + result.steps);
+    });
+  };
 
   startPedometer();
 

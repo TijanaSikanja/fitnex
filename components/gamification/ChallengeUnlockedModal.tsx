@@ -2,20 +2,20 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/Colors';
 import { useGamification } from '../../context/GamificationProvider';
 import { ConfettiOverlay } from './ConfettiOverlay';
 
 /**
- * Mounted once in app/_layout.tsx, inside GamificationProvider.
- * Automatically shows a modal every time a new achievement is added to
- * the queue (unlockQueue), no matter which screen triggered it (e.g. mid
- * workout on the workout-detail screen).
+ * Mounted once in app/_layout.tsx, alongside the other gamification modals.
+ * Shows up every time the user crosses the points threshold for the next
+ * challenge level and unlocks a new recipe.
  */
-export function AchievementUnlockedModal() {
-  const { unlockQueue, dismissUnlock } = useGamification();
-  const current = unlockQueue[0] || null;
+export function ChallengeUnlockedModal() {
+  const { challengeUnlockQueue, dismissChallengeUnlock } = useGamification();
+  const current = challengeUnlockQueue[0] || null;
 
   useEffect(() => {
     if (current) {
@@ -23,29 +23,37 @@ export function AchievementUnlockedModal() {
     }
   }, [current]);
 
+  const handleViewRecipe = () => {
+    dismissChallengeUnlock();
+    router.push('/challenges');
+  };
+
   return (
     <Modal visible={!!current} transparent animationType="fade">
       <View style={styles.overlay}>
         <ConfettiOverlay active={!!current} />
         <View style={styles.card}>
           <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            colors={['#FF9D5C', Colors.pink]}
             style={styles.iconWrapper}
           >
-            <Ionicons name={(current?.icon || 'trophy') as any} size={40} color={Colors.white} />
+            <Ionicons name={(current?.recipe_icon || 'restaurant') as any} size={40} color={Colors.white} />
           </LinearGradient>
 
-         <Text style={styles.eyebrow}>New achievement!</Text>
-          <Text style={styles.title}>{current?.title}</Text>
-          <Text style={styles.desc}>{current?.description}</Text>
-          {!!current?.xp_reward && (
-            <View style={styles.xpBadge}>
-              <Text style={styles.xpText}>+{current.xp_reward} XP</Text>
-            </View>
+          <Text style={styles.eyebrow}>New recipe unlocked!</Text>
+          <Text style={styles.title}>{current?.recipe_title || current?.title}</Text>
+          {!!current?.recipe_description && (
+            <Text style={styles.desc}>{current.recipe_description}</Text>
           )}
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>Level {current?.level_number}</Text>
+          </View>
 
-          <TouchableOpacity style={styles.button} onPress={dismissUnlock} activeOpacity={0.85}>
-            <Text style={styles.buttonText}>Awesome, thanks! 🎉</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleViewRecipe} activeOpacity={0.85}>
+            <Text style={styles.primaryButtonText}>View recipe 🍽️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={dismissChallengeUnlock}>
+            <Text style={styles.dismissText}>Later</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -96,30 +104,36 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  xpBadge: {
+  levelBadge: {
     backgroundColor: Colors.black,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
     marginBottom: 20,
   },
-  xpText: {
+  levelText: {
     color: Colors.white,
     fontSize: 14,
     fontWeight: '800',
   },
-  button: {
+  primaryButton: {
     backgroundColor: Colors.pink,
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
     width: '100%',
+    marginBottom: 12,
   },
-  buttonText: {
+  primaryButtonText: {
     color: Colors.white,
     fontWeight: '700',
     fontSize: 16,
+  },
+  dismissText: {
+    color: Colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

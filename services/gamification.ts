@@ -19,6 +19,31 @@ export type AchievementWithStatus = Achievement & {
   unlocked: boolean;
   unlocked_at: string | null;
 };
+export type WeeklyQuest = {
+  id: string; // red user_weekly_quests
+  quest_id: string;
+  quest_type: 'workouts' | 'meals' | 'steps_days' | 'perfect_days';
+  target_count: number;
+  xp_reward: number;
+  title: string;
+  description: string;
+  icon: string;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+};
+
+export type ClaimResult = {
+  claimed: boolean;
+  xpAwarded: number;
+  newTotalPoints: number;
+};
+
+export type PerfectWeekResult = {
+  awarded: boolean;
+  xpAwarded: number;
+  newTotalPoints: number;
+};
 
 export type PointTransaction = {
   id: string;
@@ -45,8 +70,6 @@ export type LevelInfo = {
   progress: number; // 0..1
 };
 
-// Nagrade za pojedinačne akcije (drži ih ovde na jednom mestu radi lakšeg
-// balansiranja/menjanja u budućnosti, bez petljanja po ekranima).
 export const POINTS = {
   WORKOUT_COMPLETED: 50,
   MEAL_LOGGED: 15,
@@ -54,11 +77,6 @@ export const POINTS = {
   PERFECT_DAY: 25,
 } as const;
 
-// ============================================================================
-// Nivo — čista funkcija, bez odlaska u bazu (ista formula je ogledana i u
-// SQL view-u `user_levels` radi konzistentnosti sa admin/SQL uvidom).
-// Nivo L počinje na 100 * L * (L-1) poena: L1=0, L2=200, L3=600, L4=1200, L5=2000 ...
-// ============================================================================
 export function getLevelInfo(totalPoints: number): LevelInfo {
   const p = Math.max(0, totalPoints || 0);
   const level = Math.max(1, Math.floor((1 + Math.sqrt(1 + p / 25)) / 2));
@@ -70,9 +88,55 @@ export function getLevelInfo(totalPoints: number): LevelInfo {
   return { level, totalPoints: p, currentLevelStart, nextLevelStart, xpIntoLevel, xpNeededForLevel, progress };
 }
 
-// ============================================================================
-// Čitanje podataka
-// ============================================================================
+export type Recipe = {
+  id: string;
+  title: string;
+  description: string;
+  ingredients: string;
+  instructions: string;
+  calories: number;
+  prep_time_minutes: number;
+  icon: string;
+  image_url: string | null;
+};
+
+export type ChallengeLevel = {
+  id: string;
+  level_number: number;
+  title: string;
+  points_required: number;
+  recipe_id: string | null;
+  icon: string;
+  recipe: Recipe | null;
+};
+
+export type ChallengeLevelWithStatus = ChallengeLevel & {
+  unlocked: boolean;
+  unlocked_at: string | null;
+};
+
+export type NewlyUnlockedChallenge = {
+  id: string;
+  level_number: number;
+  title: string;
+  points_required: number;
+  recipe_id: string | null;
+  icon: string;
+  recipe_title: string | null;
+  recipe_description: string | null;
+  recipe_icon: string | null;
+};
+
+export type StreakInfo = {
+  currentStreak: number;
+  longestStreak: number;
+};
+
+// Prag (u dostignutim danima zaredom) na kojima se korisniku prikazuje
+// proslavni modal. Ne piše ništa dodatno u bazu — samo klijentska
+// detekcija prelaska praga, na osnovu prethodnog i novog current_streak.
+export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 180, 365] as const;
+
 
 export async function getMyTotalPoints(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -113,6 +177,54 @@ export async function getAllAchievementsWithStatus(): Promise<AchievementWithSta
   }));
 }
 
+export async function getMyStreak(): Promise<StreakInfo> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { currentStreak: 0, longestStreak: 0 };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('current_streak, longest_streak')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    console.log('getMyStreak error:', error.message);
+    return { currentStreak: 0, longestStreak: 0 };
+  }
+  return {
+    currentStreak: data?.current_streak || 0,
+    longestStreak: data?.longest_streak || 0,
+  };
+}
+
+export async function getAllChallengeLevelsWithStatus(): Promise<ChallengeLevelWithStatus[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const [{ data: levels, error: lvlErr }, { data: unlocked, error: unlErr }] = await Promise.all([
+    supabase
+      .from('challenge_levels')
+      .select('*, recipe:recipes(*)')
+      .order('level_number', { ascending: true }),
+    supabase
+      .from('user_challenge_unlocks')
+      .select('challenge_level_id, unlocked_at')
+      .eq('user_id', user.id),
+  ]);
+
+  if (lvlErr) console.log('getAllChallengeLevelsWithStatus levels error:', lvlErr.message);
+  if (unlErr) console.log('getAllChallengeLevelsWithStatus unlocks error:', unlErr.message);
+
+  const unlockedMap = new Map<string, string>();
+  (unlocked || []).forEach(u => unlockedMap.set(u.challenge_level_id, u.unlocked_at));
+
+  return (levels || []).map((lvl: any) => ({
+    ...lvl,
+    unlocked: unlockedMap.has(lvl.id),
+    unlocked_at: unlockedMap.get(lvl.id) || null,
+  }));
+}
+
 export async function getRecentPointTransactions(limit = 10): Promise<PointTransaction[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -131,10 +243,6 @@ export async function getRecentPointTransactions(limit = 10): Promise<PointTrans
   return data || [];
 }
 
-// ============================================================================
-// Pisanje podataka — sve ide preko Postgres funkcija (award_points /
-// check_achievements), nikad direktnim insertom/update-om sa klijenta.
-// ============================================================================
 
 async function callAwardPoints(points: number, reason: PointReason, referenceId?: string | null) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -152,6 +260,95 @@ async function callAwardPoints(points: number, reason: PointReason, referenceId?
     return null;
   }
   return data as number; // novi total_points
+}
+
+async function callUpdateStreak(): Promise<StreakInfo & { isNewRecord: boolean }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { currentStreak: 0, longestStreak: 0, isNewRecord: false };
+
+  const { data, error } = await supabase.rpc('update_streak', { p_user_id: user.id });
+
+  if (error) {
+    console.log('update_streak RPC error:', error.message);
+    return { currentStreak: 0, longestStreak: 0, isNewRecord: false };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    currentStreak: row?.current_streak || 0,
+    longestStreak: row?.longest_streak || 0,
+    isNewRecord: !!row?.is_new_record,
+  };
+}
+
+async function callCheckChallengeLevels(): Promise<NewlyUnlockedChallenge[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase.rpc('check_challenge_levels', {
+    p_user_id: user.id,
+  });
+
+  if (error) {
+    console.log('check_challenge_levels RPC error:', error.message);
+    return [];
+  }
+  return (data || []) as NewlyUnlockedChallenge[];
+}
+
+async function callGetOrAssignWeeklyQuest(): Promise<WeeklyQuest | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase.rpc('get_or_assign_weekly_quest', {
+    p_user_id: user.id,
+  });
+
+  if (error) {
+    console.log('get_or_assign_weekly_quest RPC error:', error.message);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return row || null;
+}
+
+async function callClaimWeeklyQuestReward(): Promise<ClaimResult> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { claimed: false, xpAwarded: 0, newTotalPoints: 0 };
+
+  const { data, error } = await supabase.rpc('claim_weekly_quest_reward', {
+    p_user_id: user.id,
+  });
+
+  if (error) {
+    console.log('claim_weekly_quest_reward RPC error:', error.message);
+    return { claimed: false, xpAwarded: 0, newTotalPoints: 0 };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    claimed: !!row?.claimed,
+    xpAwarded: row?.xp_awarded || 0,
+    newTotalPoints: row?.new_total_points || 0,
+  };
+}
+
+async function callClaimPerfectWeek(): Promise<PerfectWeekResult> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { awarded: false, xpAwarded: 0, newTotalPoints: 0 };
+
+  const { data, error } = await supabase.rpc('claim_perfect_week', {
+    p_user_id: user.id,
+  });
+
+  if (error) {
+    console.log('claim_perfect_week RPC error:', error.message);
+    return { awarded: false, xpAwarded: 0, newTotalPoints: 0 };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    awarded: !!row?.awarded,
+    xpAwarded: row?.xp_awarded || 0,
+    newTotalPoints: row?.new_total_points || 0,
+  };
 }
 
 async function callCheckAchievements(): Promise<Achievement[]> {
@@ -172,13 +369,20 @@ async function callCheckAchievements(): Promise<Achievement[]> {
 export type AwardResult = {
   newTotalPoints: number | null;
   newlyUnlocked: Achievement[];
+  newlyUnlockedChallenges: NewlyUnlockedChallenge[];
 };
 
 
 async function awardAndCheck(points: number, reason: PointReason, referenceId?: string | null): Promise<AwardResult> {
   const newTotalPoints = await callAwardPoints(points, reason, referenceId);
-  const newlyUnlocked = await callCheckAchievements();
-  return { newTotalPoints, newlyUnlocked };
+  // total_points se menja tek nakon award_points-a, pa se dostignuća i
+  // otključavanje nivoa izazova (koji zavisi od total_points) proveravaju
+  // odmah nakon toga, u istom pozivu.
+  const [newlyUnlocked, newlyUnlockedChallenges] = await Promise.all([
+    callCheckAchievements(),
+    callCheckChallengeLevels(),
+  ]);
+  return { newTotalPoints, newlyUnlocked, newlyUnlockedChallenges };
 }
 
 export const gamificationService = {
@@ -194,11 +398,24 @@ export const gamificationService = {
   awardPerfectDay: () =>
     awardAndCheck(POINTS.PERFECT_DAY, 'perfect_day', null),
 
-  /** Samo proveri dostignuća bez dodele dodatnih poena (npr. pri otvaranju profila). */
   checkAchievementsOnly: () => callCheckAchievements(),
+
+  
+  updateStreak: () => callUpdateStreak(),
+
+ 
+  getOrAssignWeeklyQuest: () => callGetOrAssignWeeklyQuest(),
+
+ 
+  claimWeeklyQuestReward: () => callClaimWeeklyQuestReward(),
+
+  
+  claimPerfectWeek: () => callClaimPerfectWeek(),
 
   getMyTotalPoints,
   getAllAchievementsWithStatus,
   getRecentPointTransactions,
   getLevelInfo,
+  getMyStreak,
+  getAllChallengeLevelsWithStatus,
 };

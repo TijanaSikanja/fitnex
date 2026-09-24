@@ -27,14 +27,20 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Colors } from '../../constants/Colors';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../../context/PorifleProvider';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useGamification } from '../../context/GamificationProvider';
+import { DailyRingsCard } from '../../components/gamification/DailyRingsCard';
+import { WeeklyQuestCard } from '../../components/gamification/WeeklyQuestCard';
+import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT  } from 'react-native-maps';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-const { profile, profileImage, dailyCalorieGoal, loading, setProfileImage, setDailyCalorieGoal } = useProfile();
+const { profile, profileImage, dailyCalorieGoal, loading, setProfileImage, setDailyCalorieGoal, todaySteps } = useProfile();
+const { currentStreak, todayScore, todayCalories, weeklyQuest, claimWeeklyQuest } = useGamification();
+
 const [location, setLocation] = useState<Location.LocationObject | null>(null);
 const [gyms, setGyms] = useState<any[]>([]);
 const [loadingMap, setLoadingMap] = useState(false);
@@ -83,10 +89,15 @@ useEffect(() => {
 const fetchNearbyGyms = async (lat: number, lng: number) => {
   try {
     const query = `[out:json];node["leisure"="fitness_centre"](around:3000,${lat},${lng});out body;`;
-    const url = `https://overpass.kumi.systems/api/interpreter?data=${encodeURIComponent(query)}`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
     const response = await fetch(url);
     const text = await response.text();
-    console.log('Response text:', text.substring(0, 200));
+
+    if (!response.ok) {
+      console.log('Gyms fetch failed, status:', response.status, text.substring(0, 200));
+      return;
+    }
+
     const data = JSON.parse(text);
     console.log('Gyms found:', data.elements?.length);
     if (data.elements) setGyms(data.elements);
@@ -300,6 +311,15 @@ Alert.alert('Success', 'Profile photo updated!');
             </View>
 
             <TouchableOpacity
+              style={styles.streakPill}
+              onPress={() => router.push('/challenges')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flame" size={16} color="#FF9D5C" />
+              <Text style={styles.streakPillText}>{currentStreak}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.notificationButton}
               onPress={() => setShowNotifications(true)}
               activeOpacity={0.8}
@@ -317,6 +337,22 @@ Alert.alert('Success', 'Profile photo updated!');
 
         {/* DONJI BELI DEO */}
         <View style={styles.bodyContainer}>
+               {todayScore && (
+                
+          <DailyRingsCard
+            workoutCompleted={!!todayScore.workout_completed}
+            caloriesProgress={Math.min(1, todayCalories / (dailyCalorieGoal || 2000))}
+            caloriesLabel={`${todayCalories}/${dailyCalorieGoal || 2000}`}
+            stepsProgress={Math.min(1, todaySteps / 10000)}
+            stepsLabel={`${todaySteps.toLocaleString()}`}
+            totalScore={todayScore.score}
+          />
+        )}
+
+        {/* GAMIFICATION — WEEKLY QUEST */}
+        <View style={{ marginBottom: 20 , marginTop: 20}}>
+        <WeeklyQuestCard quest={weeklyQuest} onClaim={claimWeeklyQuest} />
+        </View>
 
         {/* NEARBY GYMS MAP */}
 <Text style={styles.sectionTitle}>Nearby Gyms</Text>
@@ -326,7 +362,7 @@ Alert.alert('Success', 'Profile photo updated!');
 ) : location ? (
   <View style={styles.mapContainer}>
     <MapView
-      provider={PROVIDER_GOOGLE}
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
       style={styles.map}
       initialRegion={{
         latitude: location.coords.latitude,
@@ -355,6 +391,39 @@ Alert.alert('Success', 'Profile photo updated!');
     Location not available
   </Text>
 )}
+{/* GAMIFICATION — CHALLENGES MAP AND RECIPE BOOK
+          <View style={styles.gamificationRow}>
+            <TouchableOpacity
+              style={styles.gamificationCard}
+              activeOpacity={0.85}
+              onPress={() => router.push('/challenges')}
+            >
+              <LinearGradient
+                colors={[Colors.gradientStart, Colors.gradientEnd]}
+                style={styles.gamificationIcon}
+              >
+                <Ionicons name="trophy" size={22} color={Colors.white} />
+              </LinearGradient>
+              <Text style={styles.gamificationCardTitle}>Challenges Map</Text>
+              <Text style={styles.gamificationCardSubtitle}>Level up your journey</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.gamificationCard}
+              activeOpacity={0.85}
+              onPress={() => router.push('/recipe-book')}
+            >
+              <LinearGradient
+                colors={[Colors.gradientStart, Colors.gradientEnd]}
+                style={styles.gamificationIcon}
+              >
+                <Ionicons name="book" size={22} color={Colors.white} />
+              </LinearGradient>
+              <Text style={styles.gamificationCardTitle}>Recipe Book</Text>
+              <Text style={styles.gamificationCardSubtitle}>Recipes you've unlocked</Text>
+            </TouchableOpacity>
+          </View> */}
+          
           {/* MORNING ROUTINE */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Morning Routine</Text>
@@ -518,6 +587,19 @@ const styles = StyleSheet.create({
   statsMiniRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   miniStatText: { color: '#9CA3AF', fontSize: 12, fontWeight: '600' },
   dotSeparator: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#9CA3AF', marginHorizontal: 8 },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#222326',
+    borderWidth: 1,
+    borderColor: '#2D2F33',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    height: 54,
+    marginRight: 10,
+  },
+  streakPillText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   notificationButton: {
     width: 54,
     height: 54,
@@ -547,6 +629,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#111214' },
+    gamificationRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  gamificationCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.gray,
+  },
+  gamificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  gamificationCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  gamificationCardSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   seeAllText: { fontSize: 14, color: '#FF7EA5', fontWeight: '600' },
   categoriesScroll: { marginBottom: 24 },
   categoryTab: {

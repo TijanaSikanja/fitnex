@@ -7,15 +7,10 @@ import { Colors } from '../../constants/Colors';
 import { useGamification } from '../../context/GamificationProvider';
 import { ConfettiOverlay } from './ConfettiOverlay';
 
-/**
- * Mounted once in app/_layout.tsx, inside GamificationProvider.
- * Automatically shows a modal every time a new achievement is added to
- * the queue (unlockQueue), no matter which screen triggered it (e.g. mid
- * workout on the workout-detail screen).
- */
-export function AchievementUnlockedModal() {
-  const { unlockQueue, dismissUnlock } = useGamification();
-  const current = unlockQueue[0] || null;
+/** Mounted once in app/_layout.tsx, alongside the other gamification modals. */
+export function StreakMilestoneModal() {
+  const { streakMilestoneQueue, dismissStreakMilestone } = useGamification();
+  const current = streakMilestoneQueue[0] || null;
 
   useEffect(() => {
     if (current) {
@@ -29,23 +24,18 @@ export function AchievementUnlockedModal() {
         <ConfettiOverlay active={!!current} />
         <View style={styles.card}>
           <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            colors={['#FF9D5C', '#FF5DA3']}
             style={styles.iconWrapper}
           >
-            <Ionicons name={(current?.icon || 'trophy') as any} size={40} color={Colors.white} />
+            <Ionicons name="flame" size={44} color={Colors.white} />
           </LinearGradient>
 
-         <Text style={styles.eyebrow}>New achievement!</Text>
+          <Text style={styles.eyebrow}>Streak</Text>
           <Text style={styles.title}>{current?.title}</Text>
           <Text style={styles.desc}>{current?.description}</Text>
-          {!!current?.xp_reward && (
-            <View style={styles.xpBadge}>
-              <Text style={styles.xpText}>+{current.xp_reward} XP</Text>
-            </View>
-          )}
 
-          <TouchableOpacity style={styles.button} onPress={dismissUnlock} activeOpacity={0.85}>
-            <Text style={styles.buttonText}>Awesome, thanks! 🎉</Text>
+          <TouchableOpacity style={styles.button} onPress={dismissStreakMilestone} activeOpacity={0.85}>
+            <Text style={styles.buttonText}>Keep going! 🔥</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -96,19 +86,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 16,
-  },
-  xpBadge: {
-    backgroundColor: Colors.black,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
     marginBottom: 20,
-  },
-  xpText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: '800',
   },
   button: {
     backgroundColor: Colors.pink,

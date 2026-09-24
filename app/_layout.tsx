@@ -12,6 +12,10 @@ import { notificationService } from '../services/notifications';
 import { ProfileProvider } from '../context/PorifleProvider';
 import { GamificationProvider } from '../context/GamificationProvider';
 import { AchievementUnlockedModal } from '../components/gamification/AchievementUnlockedModal';
+import { ChallengeUnlockedModal } from '../components/gamification/ChallengeUnlockedModal';
+import { StreakMilestoneModal } from '../components/gamification/StreakMilestoneModal';
+import { LevelUpModal } from '../components/gamification/LevelUpModal';
+import { PerfectWeekModal } from '../components/gamification/PerfectWeekModal';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -58,6 +62,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
         </Stack>
         <AchievementUnlockedModal />
+        <ChallengeUnlockedModal />
+        <StreakMilestoneModal />
+        <LevelUpModal />
+        <PerfectWeekModal />
       </GamificationProvider>
     </ProfileProvider>
   );

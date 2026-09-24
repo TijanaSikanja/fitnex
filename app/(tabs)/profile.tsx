@@ -22,6 +22,8 @@ import { useProfile } from '../../context/PorifleProvider';
 import { useGamification } from '../../context/GamificationProvider';
 import { LevelProgressCard } from '../../components/gamification/LevelProgressCard';
 import { AchievementsSection } from '../../components/gamification/AchievementsSection';
+import { StreakCard } from '../../components/gamification/StreakCard';
+import { ChallengesPreviewCard } from '../../components/gamification/ChallengesPreviewCard';
 
 const { width } = Dimensions.get('window');
 
@@ -38,27 +40,27 @@ const PRO_FEATURES = [
 
 export default function ProfileScreen() {
 const { profile, profileImage, dailyCalorieGoal, loading, todaySteps } = useProfile();
-  const { levelInfo, achievements, awardStepsGoal, awardPerfectDay } = useGamification();
+  const {
+    levelInfo,
+    achievements,
+    currentStreak,
+    longestStreak,
+    challengeLevels,
+    weeklyQuest,
+    todayScore,
+    todayCalories,
+    claimWeeklyQuest,
+  } = useGamification();
   const [weeklyScores, setWeeklyScores] = useState<any[]>([]);
   const [showProModal, setShowProModal] = useState(false);
-  const [todayScore, setTodayScore] = useState<any>(null);
-  const crossedStepsGoalRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [])
   );
-
-  // Kad brojač koraka (iz ProfileProvider-a) prvi put pređe dnevni cilj u
-  // ovoj sesiji, odmah osveži dnevni score (a time i proveri gejmifikaciju),
-  // bez čekanja da korisnik napusti i ponovo otvori Profile tab.
-  useEffect(() => {
-    if (todaySteps >= 10000 && !crossedStepsGoalRef.current) {
-      crossedStepsGoalRef.current = true;
-      fetchData();
-    }
-  }, [todaySteps]);
+  
+ 
 
 const fetchData = async () => {
   try {
@@ -90,90 +92,12 @@ const fetchData = async () => {
 
     setWeeklyScores(mapped);
 
-    const todayStr = today.toISOString().split('T')[0];
-    const prevTodayRow = scoresData?.find(s => s.date === todayStr) || null;
-    // Score dana se UVEK preračunava iz stvarnih podataka (a ne samo jednom
-    // pri prvom otvaranju profila), da bi trening/obrok dodat kasnije istog
-    // dana odmah bio odražen — i da bi otključavanje dostignuća bilo tačno.
-    await refreshTodayScore(user.id, todayStr, prevTodayRow);
-
   } catch (error: any) {
     console.log(error.message);
   } 
 };
 
-  const refreshTodayScore = async (userId: string, date: string, prevRow: any) => {
-    try {
-      // Proveri treninge danas
-      const { data: workouts } = await supabase
-        .from('workouts')
-        .select('id')
-        .eq('user_id', userId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`);
-
-      // Proveri ishranu danas — ISPRAVKA: obroci se čuvaju u tabeli 'meals'
-      // (vidi choose-meal.tsx / scan-barcode.tsx), a ne u 'nutrition_logs'
-      // (ta tabela se nigde ne popunjava, pa je kalorijski deo score-a ranije
-      // uvek bio 0/netačan).
-      const { data: mealsToday } = await supabase
-        .from('meals')
-        .select('calories')
-        .eq('user_id', userId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`);
-
-      const totalCalories = mealsToday?.reduce((sum, m) => sum + (m.calories || 0), 0) || 0;
-      const calorieGoal = dailyCalorieGoal || 2000;
-
-      const workoutCompleted = (workouts?.length || 0) > 0;
-      const caloriesCompleted = totalCalories >= calorieGoal * 0.8 && totalCalories <= calorieGoal * 1.2;
-      const stepsCompleted = todaySteps >= 10000;
-
-      // Scoring sistem — F5: trening (40), kalorije (40), koraci (20)
-      let score = 0;
-      if (workoutCompleted) score += 40;
-      if (caloriesCompleted) score += 40;
-      score += stepsCompleted ? 20 : Math.min(20, Math.floor((todaySteps / 10000) * 20));
-
-      const { data: newScore } = await supabase
-        .from('daily_scores')
-        .upsert({
-          user_id: userId,
-          date,
-          calories_completed: caloriesCompleted,
-          workout_completed: workoutCompleted,
-          steps_completed: stepsCompleted,
-          score,
-        })
-        .select()
-        .single();
-
-      setTodayScore(newScore);
-
-      // ── Gejmifikacija ──────────────────────────────────────────────────
-      // Poeni za trening/obrok se dodeljuju odmah na workout-detail.tsx i
-      // choose-meal.tsx/scan-barcode.tsx (u trenutku upisa). Ovde se
-      // dodeljuju SAMO poeni vezani za dnevni cilj koraka i "savršen dan" —
-      // i to samo kad detektujemo PRELAZAK false → true u odnosu na ono što
-      // je već bilo sačuvano u bazi (prevRow), da se izbegne duplo
-      // nagrađivanje pri ponovnom otvaranju ekrana.
-      const wasStepsCompleted = !!prevRow?.steps_completed;
-      const wasPerfectDay = !!(
-        prevRow?.workout_completed && prevRow?.calories_completed && prevRow?.steps_completed
-      );
-      const isPerfectDayNow = workoutCompleted && caloriesCompleted && stepsCompleted;
-
-      if (stepsCompleted && !wasStepsCompleted) {
-        awardStepsGoal();
-      }
-      if (isPerfectDayNow && !wasPerfectDay) {
-        awardPerfectDay();
-      }
-    } catch (e: any) {
-      console.log(e.message);
-    }
-  };
+ 
 
   const handleLogout = async () => {
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -240,6 +164,15 @@ const fetchData = async () => {
         <View style={styles.body}>
           {/* GEJMIFIKACIJA — NIVO I POENI */}
           <LevelProgressCard levelInfo={levelInfo} />
+
+          
+
+          {/* GEJMIFIKACIJA — NIZ DANA ZAREDOM */}
+          <StreakCard currentStreak={currentStreak} longestStreak={longestStreak} />
+
+          {/* GEJMIFIKACIJA — KULINARSKI IZAZOVI */}
+          <ChallengesPreviewCard challengeLevels={challengeLevels} />
+
 
           {/* FITNEX SCORE */}
           <View style={styles.scoreCard}>
@@ -313,32 +246,7 @@ const fetchData = async () => {
             </View>
           </View>
 
-          {/* TODAY SCORE BREAKDOWN */}
-          {todayScore && (
-            <View style={styles.todayCard}>
-              <Text style={styles.todayTitle}>Today's Score</Text>
-              <View style={styles.todayRow}>
-                <View style={styles.todayItem}>
-                  <Text style={styles.todayEmoji}>🏋️</Text>
-                  <Text style={styles.todayLabel}>Workout</Text>
-                  <Text style={[styles.todayStatus, { color: todayScore.workout_completed ? Colors.success : Colors.error }]}>
-                    {todayScore.workout_completed ? '+40pts' : '0pts'}
-                  </Text>
-                </View>
-                <View style={styles.todayItem}>
-                  <Text style={styles.todayEmoji}>🥗</Text>
-                  <Text style={styles.todayLabel}>Calories</Text>
-                  <Text style={[styles.todayStatus, { color: todayScore.calories_completed ? Colors.success : Colors.error }]}>
-                    {todayScore.calories_completed ? '+40pts' : '0pts'}
-                  </Text>
-                </View>
-                
-              </View>
-              <View style={styles.todayTotal}>
-                <Text style={styles.todayTotalText}>Total today: {todayScore.score} pts</Text>
-              </View>
-            </View>
-          )}
+         
 {/* Steps */}
 <View style={styles.stepsCard}>
   <Text style={styles.todayTitle}>Today's Steps</Text>
@@ -351,7 +259,7 @@ const fetchData = async () => {
   </View>
 </View>
           <AchievementsSection achievements={achievements} />
-          
+
           {/* LOGOUT */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color={Colors.error} />
@@ -499,6 +407,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
     gap: 16,
+  },
+   friendsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.gray,
+  },
+  friendsButtonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFE5F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendsButtonTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  friendsButtonSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   scoreCard: {
     backgroundColor: Colors.white,

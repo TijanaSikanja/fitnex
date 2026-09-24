@@ -7,15 +7,10 @@ import { Colors } from '../../constants/Colors';
 import { useGamification } from '../../context/GamificationProvider';
 import { ConfettiOverlay } from './ConfettiOverlay';
 
-/**
- * Mounted once in app/_layout.tsx, inside GamificationProvider.
- * Automatically shows a modal every time a new achievement is added to
- * the queue (unlockQueue), no matter which screen triggered it (e.g. mid
- * workout on the workout-detail screen).
- */
-export function AchievementUnlockedModal() {
-  const { unlockQueue, dismissUnlock } = useGamification();
-  const current = unlockQueue[0] || null;
+/** Mountovan jednom u app/_layout.tsx, pored ostalih gejmifikacionih modala. */
+export function LevelUpModal() {
+  const { levelUpQueue, dismissLevelUp } = useGamification();
+  const current = levelUpQueue[0] || null;
 
   useEffect(() => {
     if (current) {
@@ -28,24 +23,21 @@ export function AchievementUnlockedModal() {
       <View style={styles.overlay}>
         <ConfettiOverlay active={!!current} />
         <View style={styles.card}>
-          <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientEnd]}
+          <LinearGradient 
+            colors={['#FFD166', '#FF9D5C']}
             style={styles.iconWrapper}
           >
-            <Ionicons name={(current?.icon || 'trophy') as any} size={40} color={Colors.white} />
+            <Ionicons name="rocket" size={44} color={Colors.white} />
           </LinearGradient>
 
-         <Text style={styles.eyebrow}>New achievement!</Text>
-          <Text style={styles.title}>{current?.title}</Text>
-          <Text style={styles.desc}>{current?.description}</Text>
-          {!!current?.xp_reward && (
-            <View style={styles.xpBadge}>
-              <Text style={styles.xpText}>+{current.xp_reward} XP</Text>
-            </View>
-          )}
+           <Text style={styles.eyebrow}>New level</Text>
+          <Text style={styles.title}>Level {current?.level}! 🎉</Text>
+          <Text style={styles.desc}>
+            Your consistency is paying off — you've leveled up your Fitnex experience.
+          </Text>
 
-          <TouchableOpacity style={styles.button} onPress={dismissUnlock} activeOpacity={0.85}>
-            <Text style={styles.buttonText}>Awesome, thanks! 🎉</Text>
+          <TouchableOpacity style={styles.button} onPress={dismissLevelUp} activeOpacity={0.85}>
+            <Text style={styles.buttonText}>Onward! 🚀</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -56,7 +48,7 @@ export function AchievementUnlockedModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -69,9 +61,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   iconWrapper: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -85,30 +77,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: Colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   desc: {
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 16,
-  },
-  xpBadge: {
-    backgroundColor: Colors.black,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 20,
-  },
-  xpText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: '800',
+    marginBottom: 22,
   },
   button: {
     backgroundColor: Colors.pink,
