@@ -59,7 +59,22 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
 useEffect(() => {
   refreshProfile();
-}, []);
+
+  const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN') {
+      refreshProfile();
+    }
+    if (event === 'SIGNED_OUT') {
+      setProfile(null);
+      setProfileImageState(null);
+      setDailyCalorieGoalState(2000);
+    }
+  });
+
+  return () => {
+    authListener?.subscription?.unsubscribe();
+  };
+}, [refreshProfile]);
 
 useEffect(() => {
   let subscription: any;

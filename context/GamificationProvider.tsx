@@ -103,6 +103,8 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     totalPointsRef.current = totalPoints;
   }, [totalPoints]);
 
+  const refreshTodayGoalsRef = useRef<(() => Promise<void>) | undefined>(undefined);
+    
   const refresh = useCallback(async () => {
     try {
       const [points, allAchievements, streak, levels, quest] = await Promise.all([
@@ -125,8 +127,35 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  useEffect(() => {
+   useEffect(() => {
     refresh();
+
+   
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        refresh();
+        refreshTodayGoalsRef.current?.();
+      }
+      if (event === 'SIGNED_OUT') {
+        setTotalPoints(0);
+        setAchievements([]);
+        setCurrentStreak(0);
+        setLongestStreak(0);
+        setChallengeLevels([]);
+        setWeeklyQuest(null);
+        setTodayScore(null);
+        setTodayCalories(0);
+        setUnlockQueue([]);
+        setChallengeUnlockQueue([]);
+        setStreakMilestoneQueue([]);
+        setLevelUpQueue([]);
+        setPerfectWeekQueue([]);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, [refresh]);
 
   const applyNewTotalPoints = useCallback((newTotal: number) => {
@@ -297,7 +326,8 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     }
   }, [dailyCalorieGoal, todaySteps, syncDailyStreak, awardStepsGoal, awardPerfectDay]);
 
-  useEffect(() => {
+    useEffect(() => {
+    refreshTodayGoalsRef.current = refreshTodayGoals;
     refreshTodayGoals();
   }, [refreshTodayGoals]);
 
