@@ -118,9 +118,9 @@ export default function WorkoutScreen() {
           <View style={styles.personalizedCard}>
             <Image
               source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600' }}
-              style={styles.personalizedImage}
+              style={[StyleSheet.absoluteFill, styles.personalizedImage]}
             />
-            <View style={styles.personalizedOverlay} />
+            <View style={[StyleSheet.absoluteFill, styles.personalizedOverlay]} />
             <View style={styles.personalizedContent}>
               <Text style={styles.personalizedTitle}>Personalized{'\n'}Workout & Training</Text>
               <Text style={styles.personalizedSubtitle}>
@@ -208,8 +208,8 @@ const styles = StyleSheet.create({
   categoryDesc: { fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 17 },
   personalizedContainer: { paddingHorizontal: 20, marginBottom: 24 },
   personalizedCard: { borderRadius: 24, overflow: 'hidden', height: 280 },
-  personalizedImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  personalizedOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  personalizedImage: { width: '100%', height: '100%' },
+  personalizedOverlay: { backgroundColor: 'rgba(0,0,0,0.5)' },
   personalizedContent: { flex: 1, justifyContent: 'flex-end', padding: 24 },
   personalizedTitle: { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 30, marginBottom: 8 },
   personalizedSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19, marginBottom: 20 },

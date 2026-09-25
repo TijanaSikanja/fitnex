@@ -149,10 +149,14 @@ export default function NutritionScreen() {
   >
     <Ionicons name="barcode-outline" size={24} color="#333" />
   </TouchableOpacity>
-  
-  <TouchableOpacity style={styles.iconButton}>
-    <Ionicons name="share-outline" size={24} color="#333" />
+   <TouchableOpacity
+    style={styles.iconButton}
+    onPress={() => router.push('/search-food')}
+  >
+    <Ionicons name="search-outline" size={24} color="#333" />
   </TouchableOpacity>
+  
+  
         </View>
       </View>
 
@@ -262,7 +266,7 @@ export default function NutritionScreen() {
 const styles = StyleSheet.create({
   // Empty state
   background: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.38)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.38)' },
   emptyContent: {
     flex: 1, justifyContent: 'flex-end',
     alignItems: 'center', paddingBottom: 120, paddingHorizontal: 30,

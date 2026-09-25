@@ -17,7 +17,7 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dostignuća</Text>
+        <Text style={styles.headerTitle}>Achievements</Text>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{unlockedCount}/{achievements.length}</Text>
         </View>
@@ -58,11 +58,11 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
                 <Text style={styles.modalTitle}>{selected.title}</Text>
                 <Text style={styles.modalDesc}>{selected.description}</Text>
                 <Text style={styles.modalXp}>
-                  {selected.unlocked ? `+${selected.xp_reward} XP osvojeno` : `${selected.xp_reward} XP nagrada`}
+                  {selected.unlocked ? `+${selected.xp_reward} XP earned` : `${selected.xp_reward} XP reward`}
                 </Text>
                 {selected.unlocked && selected.unlocked_at && (
                   <Text style={styles.modalDate}>
-                    Otključano {new Date(selected.unlocked_at).toLocaleDateString('sr-RS')}
+                    Unlocked {new Date(selected.unlocked_at).toLocaleDateString('en-US')}
                   </Text>
                 )}
               </>

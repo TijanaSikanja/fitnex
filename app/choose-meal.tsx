@@ -88,10 +88,8 @@ const handleAddMeal = async () => {
       awardMealLogged(insertedMeal.id);
     }
 
-    router.push({
-      pathname: '/(tabs)/nutrition',
-      params: { showModal: 'true' },
-    });
+    router.dismissAll();
+    router.setParams({ showModal: 'true' });
   }
 };
 

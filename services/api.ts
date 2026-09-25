@@ -62,33 +62,3 @@ export const workoutService = {
   },
 };
 
-export const nutritionService = {
-
-  async getNutritionLogs(userId: string) {
-    const { data, error } = await supabase
-      .from('nutrition_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('logged_at', { ascending: false });
-    if (error) throw error;
-    return data;
-  },
-
-  async createNutritionLog(log: any) {
-    const { data, error } = await supabase
-      .from('nutrition_logs')
-      .insert(log)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteNutritionLog(id: string) {
-    const { error } = await supabase
-      .from('nutrition_logs')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-  },
-};

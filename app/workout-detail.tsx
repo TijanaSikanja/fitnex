@@ -9,6 +9,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { Colors } from '../constants/Colors';
 import { useGamification } from '../context/GamificationProvider';
+import { useWorkoutTimer } from '../context/WorkoutTimerProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,24 +38,34 @@ type Exercise = {
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+     const { id } = useLocalSearchParams<{ id: string }>();
   const { awardWorkoutCompleted } = useGamification();
-  
+  const {
+    workoutTitle: activeWorkoutTitle,
+    timeLeft,
+    isRunning: isTimerRunning,
+    startTimer: startGlobalTimer,
+    pauseTimer,
+    resumeTimer,
+    stopTimer: stopGlobalTimer,
+  } = useWorkoutTimer();
+
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
-  const [started, setStarted] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Stanja za nove funkcionalnosti (Details Modal i Timer)
+  // "started" se sad izvodi direktno iz global tajmer konteksta (uporedi
+  // po nazivu treninga), a ne iz lokalnog state-a — tako i dalje ostaje
+  // tačan kad se ekran unmount-uje/remount-uje (izađeš pa se vratiš), umesto
+  // da se svaki put resetuje na false.
+  const started = !!workout && activeWorkoutTitle === workout.title;
+
+  // Stanja za nove funkcionalnosti (Details Modal)
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerRef = useRef<any>(null);
 
   useEffect(() => {
     if (id) fetchWorkout();
-    return () => clearInterval(timerRef.current);
   }, [id]);
 
   const fetchWorkout = async () => {
@@ -63,11 +74,7 @@ export default function WorkoutDetailScreen() {
       .select('*')
       .eq('id', id)
       .single();
-    setWorkout(data);
-
-    if (data) {
-      setTimeLeft(data.duration_minutes * 60);
-    }
+     setWorkout(data);
 
     const { data: exData } = await supabase
       .from('workout_exercises')
@@ -78,38 +85,8 @@ export default function WorkoutDetailScreen() {
     setLoading(false);
   };
 
-  // Funkcija za pokretanje tajmera odbrojavanja
-  const startTimer = () => {
-    if (isTimerRunning) return;
-    setIsTimerRunning(true);
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(timerRef.current!);
-          setIsTimerRunning(false);
-          setStarted(false);
-          Alert.alert("🎉 Workout finished!", "Great job! You killed it!");
-          return workout ? workout.duration_minutes * 60 : 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
-
-  // Funkcija za pauziranje tajmera
-  const pauseTimer = () => {
-    clearInterval(timerRef.current);
-    setIsTimerRunning(false);
-  };
-
-  // Funkcija za potpuno zaustavljanje i resetovanje tajmera
-  const stopTimer = () => {
-    clearInterval(timerRef.current);
-    setIsTimerRunning(false);
-    setStarted(false);
-    if (workout) {
-      setTimeLeft(workout.duration_minutes * 60);
-    }
+     const stopTimer = () => {
+    stopGlobalTimer();
   };
 
   // Formatiranje sekundi u prikaz 00:00
@@ -122,7 +99,7 @@ export default function WorkoutDetailScreen() {
   const handleStart = async () => {
     if (!workout) return;
 
-    // Ako tajmer radi, klik na glavno dugme ga pauzira
+       // Ako tajmer radi, klik na glavno dugme ga pauzira
     if (isTimerRunning) {
       pauseTimer();
       return;
@@ -130,7 +107,7 @@ export default function WorkoutDetailScreen() {
 
     // Ako je pauziran ili resetovan, klik ga ponovo pokreće
     if (started && !isTimerRunning) {
-      startTimer();
+      resumeTimer();
       return;
     }
 
@@ -140,22 +117,25 @@ export default function WorkoutDetailScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      const { data: insertedWorkout } = await supabase
+            const { data: insertedWorkout, error: insertError } = await supabase
       .from('workouts')
       .insert({
         user_id: user.id,
-        catalog_id: workout.id,
         title: workout.title,
-        category: workout.category,
+        workout_type: workout.category,
         duration_minutes: workout.duration_minutes,
         calories_burned: workout.calories_burned,
-        exercises_count: workout.exercises_count,
       })
       .select()
       .single();
 
-    setStarted(true);
-    startTimer();
+      if (insertError) {
+        console.log('workouts insert error:', insertError.message);
+        Alert.alert('Error', 'Could not save this workout. Please try again.');
+        return;
+      }
+
+      startGlobalTimer(workout.title, workout.duration_minutes * 60);
 
     Alert.alert('🎉 Workout Started!', `${workout.title} has been started. Timer is running!`);
 
@@ -204,21 +184,6 @@ export default function WorkoutDetailScreen() {
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
       </SafeAreaView>
-
-      {/* TAJMER PRIKAZ - Prikazuje se samo kada je trening aktivan ili pauziran */}
-      {started && timeLeft < workout.duration_minutes * 60 && (
-        <View style={[styles.timerBadge, !isTimerRunning && styles.timerBadgePaused]}>
-          <Ionicons 
-            name={isTimerRunning ? "time-outline" : "pause-circle-outline"} 
-            size={16} 
-            color="#fff" 
-            style={{ marginRight: 6 }} 
-          />
-          <Text style={styles.timerText}>
-            {formatTime(timeLeft)} {!isTimerRunning && '(Paused)'}
-          </Text>
-        </View>
-      )}
 
       <View style={styles.totalBadge}>
         <Text style={styles.totalBadgeText}>{workout.exercises_count} Total</Text>
@@ -401,19 +366,6 @@ const styles = StyleSheet.create({
   },
   totalBadgeText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   
-  timerBadge: {
-    position: 'absolute', top: 60, left: 70,
-    backgroundColor: '#FF2A7A',
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-    shadowColor: '#FF2A7A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5,
-  },
-  timerBadgePaused: {
-    backgroundColor: '#777',
-    shadowColor: '#777',
-  },
-  timerText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     top: height * 0.42,

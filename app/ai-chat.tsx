@@ -97,7 +97,7 @@ export default function AIChatScreen() {
           'Authorization': `Bearer ${process.env.EXPO_PUBLIC_GROQ_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             ...newMessages.map(m => ({ role: m.role, content: m.content })),
@@ -232,9 +232,6 @@ export default function AIChatScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.moreBtn}>
-          <Ionicons name="ellipsis-horizontal" size={20} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView

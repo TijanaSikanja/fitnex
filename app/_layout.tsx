@@ -11,6 +11,8 @@ import { StatusBar } from 'expo-status-bar';
 import { notificationService } from '../services/notifications';
 import { ProfileProvider } from '../context/PorifleProvider';
 import { GamificationProvider } from '../context/GamificationProvider';
+import { WorkoutTimerProvider } from '../context/WorkoutTimerProvider';
+import { FloatingTimer } from '../components/workout/FloatingTimer';
 import { AchievementUnlockedModal } from '../components/gamification/AchievementUnlockedModal';
 import { ChallengeUnlockedModal } from '../components/gamification/ChallengeUnlockedModal';
 import { StreakMilestoneModal } from '../components/gamification/StreakMilestoneModal';
@@ -56,6 +58,7 @@ export default function RootLayout() {
   return (
   <ProfileProvider>
       <GamificationProvider>
+          <WorkoutTimerProvider>
         <StatusBar style="auto" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
@@ -66,6 +69,8 @@ export default function RootLayout() {
         <StreakMilestoneModal />
         <LevelUpModal />
         <PerfectWeekModal />
+        <FloatingTimer />
+         </WorkoutTimerProvider>
       </GamificationProvider>
     </ProfileProvider>
   );

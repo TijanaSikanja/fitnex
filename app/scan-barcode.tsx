@@ -105,10 +105,8 @@ export default function ScanBarcodeScreen() {
       awardMealLogged(insertedMeal.id);
     }
 
-    router.push({
-      pathname: '/(tabs)/nutrition',
-      params: { showModal: 'true' },
-    });
+    router.dismissAll();
+    router.setParams({ showModal: 'true' });
   } else {
     console.log('insert error:', error);
     Alert.alert('Error', error.message);

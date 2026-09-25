@@ -174,39 +174,40 @@ const fetchData = async () => {
           <ChallengesPreviewCard challengeLevels={challengeLevels} />
 
 
-          {/* FITNEX SCORE */}
+                   {/* FITNEX SCORE */}
           <View style={styles.scoreCard}>
             <View style={styles.scoreHeader}>
               <View style={styles.scoreTitle}>
                 <View style={styles.scoreDot} />
-                <Text style={styles.scoreTitleText}>Fitnex Score</Text>
+                <Text style={styles.scoreTitleText}>Weekly Fitnex Score</Text>
               </View>
-              <TouchableOpacity style={styles.weeklyBadge}>
-                <Text style={styles.weeklyBadgeText}>Weekly</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Score broj */}
-            <View style={styles.scoreNumberContainer}>
-              <View style={styles.scoreNumberBadge}>
-                <Text style={styles.scoreNumber}>{fitnexScore}</Text>
+              <View style={styles.scoreAverageBadge}>
+                <Text style={styles.scoreAverageText}>{fitnexScore}/100 avg</Text>
               </View>
             </View>
 
-            {/* Bar chart */}
+            <Text style={styles.scoreExplainer}>
+              Each day earns up to 100 pts: 40 for a workout, 40 for hitting your
+              calorie goal, and 20 for your step goal.
+            </Text>
+
+            {/* Bar chart — fixed 0–100 scale, exact score shown above each bar */}
             <View style={styles.chart}>
               {weeklyScores.map((item, index) => {
-                const barHeight = maxScore > 0 ? (item.score / maxScore) * 80 : 4;
+                const barHeight = (item.score / 100) * 90;
                 const isToday = index === new Date().getDay() - 1;
                 return (
                   <View key={index} style={styles.barContainer}>
+                    <Text style={[styles.barScoreLabel, isToday && styles.barLabelActive]}>
+                      {item.score}
+                    </Text>
                     <View style={styles.barWrapper}>
                       <View
                         style={[
                           styles.bar,
                           {
                             height: Math.max(barHeight, 4),
-                            backgroundColor: isToday ? Colors.black : Colors.gray,
+                            backgroundColor: isToday ? Colors.pink : Colors.gray,
                           },
                         ]}
                       />
@@ -217,13 +218,6 @@ const fetchData = async () => {
                   </View>
                 );
               })}
-            </View>
-
-            {/* Y axis labels */}
-            <View style={styles.yAxis}>
-              {[100, 90, 80, 70, 60].map(v => (
-                <Text key={v} style={styles.yAxisLabel}>{v}</Text>
-              ))}
             </View>
           </View>
 
@@ -466,41 +460,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
   },
-  weeklyBadge: {
-    backgroundColor: Colors.gray,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  weeklyBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  scoreNumberContainer: {
-    position: 'absolute',
-    top: 48,
-    left: 28,
-    zIndex: 10,
-  },
-  scoreNumberBadge: {
+    scoreAverageBadge: {
     backgroundColor: Colors.black,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  scoreNumber: {
+  scoreAverageText: {
     color: Colors.white,
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  scoreExplainer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
+    marginTop: 4,
+    marginBottom: 14,
   },
   chart: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: 100,
+    height: 130,
     marginTop: 8,
-    paddingLeft: 8,
   },
   barContainer: {
     flex: 1,
@@ -508,7 +491,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   barWrapper: {
-    height: 80,
+    height: 90,
     justifyContent: 'flex-end',
   },
   bar: {
@@ -516,24 +499,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     minHeight: 4,
   },
+  barScoreLabel: {
+    fontSize: 10,
+    color: Colors.textLight,
+    fontWeight: '700',
+  },
   barLabel: {
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   barLabelActive: {
-    color: Colors.black,
+    color: Colors.pink,
     fontWeight: '700',
-  },
-  yAxis: {
-    position: 'absolute',
-    left: 8,
-    top: 48,
-    gap: 8,
-  },
-  yAxisLabel: {
-    fontSize: 10,
-    color: Colors.textLight,
   },
   statsRow: {
     flexDirection: 'row',
