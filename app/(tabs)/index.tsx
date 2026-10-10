@@ -301,7 +301,7 @@ Alert.alert('Success', 'Profile photo updated!');
 
               <View style={styles.userTextContainer}>
                 <Text style={styles.dateText}>{today}</Text>
-                <Text style={styles.welcomeText}>Hello, {firstName} 👋</Text>
+                <Text style={styles.welcomeText}>Hello, {firstName} </Text>
                 <View style={styles.statsMiniRow}>
                   <Text style={styles.miniStatText}>{currentCalories} kcal</Text>
                   <View style={styles.dotSeparator} />
@@ -349,7 +349,7 @@ Alert.alert('Success', 'Profile photo updated!');
           />
         )}
 
-        {/* GAMIFICATION — WEEKLY QUEST */}
+        {/* GAMIFICATION - WEEKLY QUEST */}
         <View style={{ marginBottom: 20 , marginTop: 20}}>
         <WeeklyQuestCard quest={weeklyQuest} onClaim={claimWeeklyQuest} />
         </View>
@@ -391,7 +391,7 @@ Alert.alert('Success', 'Profile photo updated!');
     Location not available
   </Text>
 )}
-{/* GAMIFICATION — CHALLENGES MAP AND RECIPE BOOK
+{/* GAMIFICATION - CHALLENGES MAP AND RECIPE BOOK
           <View style={styles.gamificationRow}>
             <TouchableOpacity
               style={styles.gamificationCard}
@@ -597,7 +597,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 12,
     height: 54,
-    marginRight: 10,
   },
   streakPillText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   notificationButton: {

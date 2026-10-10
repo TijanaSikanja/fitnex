@@ -19,7 +19,7 @@
 
 ## 📱 About
 
-**FITNEX** is a cross-platform mobile fitness application built with React Native and Expo that helps users achieve their fitness goals through personalized nutrition tracking, workout management, and AI-powered assistance — all in one place.
+**FITNEX** is a cross-platform mobile fitness application built with React Native and Expo that helps users achieve their fitness goals through personalized nutrition tracking, workout management, and AI-powered assistance - all in one place.
 
 > No more switching between apps. No more guesswork. Just results.
 
@@ -184,6 +184,6 @@ Scan the QR code with **Expo Go** on your Android or iOS device.
 
 Made with ❤️ and lots of ☕
 
-*FITNEX — Because every rep counts.*
+*FITNEX - Because every rep counts.*
 
 </div>

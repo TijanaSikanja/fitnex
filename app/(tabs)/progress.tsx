@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -27,7 +28,7 @@ export default function ProgressScreen() {
   const [todayWorkouts, setTodayWorkouts] = useState<any[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState<Set<string>>(new Set());
 
-  // Voda — klikabilno
+  // Voda - klikabilno
   const [waterGlasses, setWaterGlasses] = useState(0);
   const waterGoal = 8;
 
@@ -41,10 +42,15 @@ export default function ProgressScreen() {
   const caloriesAnim = useRef(new Animated.Value(0)).current;
   const circleAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
+ useFocusEffect(
+  useCallback(() => {
     fetchData();
-    setupPedometer();
-  }, []);
+  }, [])
+);
+
+useEffect(() => {
+  setupPedometer();
+}, []);
 
   const setupPedometer = async () => {
     try {
@@ -65,16 +71,15 @@ export default function ProgressScreen() {
         });
         return () => subscription.remove();
       } else {
-        const simulatedSteps = 3456;
-        setCurrentSteps(simulatedSteps);
-        animateValue(stepsAnim, simulatedSteps / STEPS_GOAL);
-      }
-    } catch (e) {
-      const simulatedSteps = 3456;
-      setCurrentSteps(simulatedSteps);
-      animateValue(stepsAnim, simulatedSteps / STEPS_GOAL);
+      setCurrentSteps(0);
+      animateValue(stepsAnim, 0);
     }
-  };
+  } catch (e) {
+    setIsPedometerAvailable(false);
+    setCurrentSteps(0);
+    animateValue(stepsAnim, 0);
+  }
+};
 
   const animateValue = (anim: Animated.Value, toValue: number) => {
     Animated.timing(anim, {
@@ -98,7 +103,7 @@ const fetchData = async () => {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // ← PROMENI OVO — čita iz meals tabele
+      // ← PROMENI OVO - čita iz meals tabele
       const { data: nutritionData } = await supabase
         .from('meals')
         .select('*')
@@ -140,7 +145,7 @@ const fetchData = async () => {
   };
 
   const handleWaterToggle = async (index: number) => {
-    // Ako klikneš na već popunjenu čašu — smanji, ako ne — povećaj
+    // Ako klikneš na već popunjenu čašu - smanji, ako ne - povećaj
     const newWater = index < waterGlasses ? index : index + 1;
     setWaterGlasses(newWater);
 
@@ -242,7 +247,7 @@ const totalFat = todayNutrition.reduce((s, n) => s + (n.fat_g || 0), 0);
           </TouchableOpacity>
         </View>
 
-        {/* KALORIJE — GLAVNI KRUG SA ANIMACIJOM */}
+        {/* KALORIJE - GLAVNI KRUG SA ANIMACIJOM */}
         <View style={styles.mainCircleContainer}>
           <LinearGradient
             colors={['#FFF0F6', '#FFE4F0']}
@@ -305,7 +310,7 @@ const totalFat = todayNutrition.reduce((s, n) => s + (n.fat_g || 0), 0);
           </LinearGradient>
         </View>
 
-        {/* MAKRO NUTRIJENTI — iz baze */}
+        {/* MAKRO NUTRIJENTI - iz baze */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Macronutrients</Text>
           <View style={styles.macroGrid}>
@@ -370,12 +375,12 @@ const totalFat = todayNutrition.reduce((s, n) => s + (n.fat_g || 0), 0);
               </View>
             </View>
             {!isPedometerAvailable && (
-              <Text style={styles.pedometerNote}>* Simulated steps — pedometer not available</Text>
+              <Text style={styles.pedometerNote}>* Simulated steps - pedometer not available</Text>
             )}
           </LinearGradient>
         </View>
 
-        {/* VODA — KLIKABILNO */}
+        {/* VODA - KLIKABILNO */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Water Intake 💧</Text>
@@ -410,7 +415,7 @@ const totalFat = todayNutrition.reduce((s, n) => s + (n.fat_g || 0), 0);
           </View>
         </View>
 
-        {/* TRENINZI — KLIKABILNO */}
+        {/* TRENINZI - KLIKABILNO */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Workouts 🏋️</Text>
           {todayWorkouts.length === 0 ? (

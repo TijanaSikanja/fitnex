@@ -30,7 +30,7 @@ export default function FoodCategoryBrowser({ onFoodLogged }: Props) {
     try {
       await notificationService.sendInstantNotification(
         '🍴 Food Logged',
-        `${foodName} added to today's log — ${kcal} kcal`
+        `${foodName} added to today's log - ${kcal} kcal`
       );
     } finally {
       onFoodLogged?.();

@@ -80,7 +80,7 @@ export default function SearchFoodScreen() {
     try {
       let mapped = await fetchFoodResults(searchTerm);
 
-      // Poznata mana starog Open Food Facts search.pl endpoint-a — prva
+      // Poznata mana starog Open Food Facts search.pl endpoint-a - prva
       // pretraga za novi pojam ponekad vrati 0 rezultata dok se ne "zagreje"
       // indeks na njihovoj strani. Tihi jedan retry pre nego što prikažemo
       // "No results", pa korisnik to skoro nikad ne primeti.

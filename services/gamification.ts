@@ -133,7 +133,7 @@ export type StreakInfo = {
 };
 
 // Prag (u dostignutim danima zaredom) na kojima se korisniku prikazuje
-// proslavni modal. Ne piše ništa dodatno u bazu — samo klijentska
+// proslavni modal. Ne piše ništa dodatno u bazu - samo klijentska
 // detekcija prelaska praga, na osnovu prethodnog i novog current_streak.
 export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 180, 365] as const;
 

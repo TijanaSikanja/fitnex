@@ -56,7 +56,7 @@ export default function WorkoutDetailScreen() {
   const [saving, setSaving] = useState(false);
 
   // "started" se sad izvodi direktno iz global tajmer konteksta (uporedi
-  // po nazivu treninga), a ne iz lokalnog state-a — tako i dalje ostaje
+  // po nazivu treninga), a ne iz lokalnog state-a - tako i dalje ostaje
   // tačan kad se ekran unmount-uje/remount-uje (izađeš pa se vratiš), umesto
   // da se svaki put resetuje na false.
   const started = !!workout && activeWorkoutTitle === workout.title;

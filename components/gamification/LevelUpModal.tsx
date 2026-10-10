@@ -33,7 +33,7 @@ export function LevelUpModal() {
            <Text style={styles.eyebrow}>New level</Text>
           <Text style={styles.title}>Level {current?.level}! 🎉</Text>
           <Text style={styles.desc}>
-            Your consistency is paying off — you've leveled up your Fitnex experience.
+            Your consistency is paying off - you've leveled up your Fitnex experience.
           </Text>
 
           <TouchableOpacity style={styles.button} onPress={dismissLevelUp} activeOpacity={0.85}>

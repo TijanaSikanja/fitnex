@@ -1,14 +1,15 @@
 import {
   View, Text, TouchableOpacity, StyleSheet,
   FlatList, Image, Modal, ScrollView, ActivityIndicator,
-  ImageBackground, Dimensions
+  ImageBackground, Dimensions,  Animated, PanResponder, Alert
 } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { Colors } from '../../constants/Colors';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGamification } from '../../context/GamificationProvider';
 
 type Meal = {
   id: string;
@@ -53,6 +54,8 @@ export default function NutritionScreen() {
   const [showModal, setShowModal] = useState(false);
   const [hasEverAddedMeal, setHasEverAddedMeal] = useState(false);
 
+  const { refreshTodayGoals } = useGamification();
+
   const days = getLast7Days();
 
   useEffect(() => {
@@ -92,6 +95,16 @@ export default function NutritionScreen() {
     setLoading(false);
   };
 
+  const handleDeleteMeal = async (mealId: string) => {
+  const { error } = await supabase.from('meals').delete().eq('id', mealId);
+  if (!error) {
+    setMeals(prev => prev.filter(m => m.id !== mealId));
+    setFiltered(prev => prev.filter(m => m.id !== mealId));
+    await refreshTodayGoals();
+  } else {
+    Alert.alert('Error', 'Failed to delete meal. Please try again.');
+  }
+};
   useFocusEffect(
     useCallback(() => {
       fetchMeals(selectedDate);
@@ -104,6 +117,8 @@ export default function NutritionScreen() {
     if (filter === 'All') setFiltered(meals);
     else setFiltered(meals.filter(m => m.meal_type === filter));
   };
+
+  
 
   // ── Empty state screen ──────────────────────────────────────
   if (!loading && !hasEverAddedMeal) {
@@ -212,25 +227,8 @@ export default function NutritionScreen() {
       data={filtered}
       keyExtractor={item => item.id}
       contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
-      renderItem={({ item }) => (
-        <View style={styles.mealCard}>
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={styles.mealImage} />
-          ) : (
-            <View style={[styles.mealImage, styles.mealImagePlaceholder]}>
-              <Ionicons name="restaurant-outline" size={24} color="#ccc" />
-            </View>
-          )}
-          <View style={styles.mealInfo}>
-            <Text style={styles.mealName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.mealCal}>🔥 {item.calories} kcal</Text>
-            <View style={styles.macroRow}>
-              <Text style={styles.macroText}>{item.protein_g}g Protein</Text>
-              <Text style={styles.macroText}>{item.fat_g}g Fat</Text>
-              <Text style={styles.macroText}>{item.carbs_g}g Carbs</Text>
-            </View>
-          </View>
-        </View>
+            renderItem={({ item }) => (
+        <SwipeableMealCard item={item} onDelete={handleDeleteMeal} />
       )}
     />
   )}
@@ -259,7 +257,87 @@ export default function NutritionScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-    </SafeAreaView>
+        </SafeAreaView>
+  );
+}
+
+const DELETE_WIDTH = 80;
+const SWIPE_THRESHOLD = -60;
+
+function SwipeableMealCard({ item, onDelete }: { item: Meal; onDelete: (id: string) => void }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isOpen = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 10,
+      onPanResponderMove: (_, g) => {
+        const base = isOpen.current ? -DELETE_WIDTH : 0;
+        translateX.setValue(Math.max(-DELETE_WIDTH, Math.min(0, base + g.dx)));
+      },
+      onPanResponderRelease: (_, g) => {
+        const shouldOpen = g.dx < SWIPE_THRESHOLD;
+        isOpen.current = shouldOpen;
+        Animated.spring(translateX, {
+          toValue: shouldOpen ? -DELETE_WIDTH : 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  const confirmDelete = () => {
+    Alert.alert(
+      'Delete meal?',
+      `Remove "${item.name}" from your log?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            isOpen.current = false;
+            Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete(item.id),
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.swipeContainer}>
+      <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete} activeOpacity={0.8}>
+        <Ionicons name="trash-outline" size={22} color="#fff" />
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </TouchableOpacity>
+
+      <Animated.View
+        style={[styles.mealCard, { transform: [{ translateX }] }]}
+        {...panResponder.panHandlers}
+      >
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.mealImage} />
+        ) : (
+          <View style={[styles.mealImage, styles.mealImagePlaceholder]}>
+            <Ionicons name="restaurant-outline" size={24} color="#ccc" />
+          </View>
+        )}
+        <View style={styles.mealInfo}>
+          <Text style={styles.mealName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.mealCal}>🔥 {item.calories} kcal</Text>
+          <View style={styles.macroRow}>
+            <Text style={styles.macroText}>{item.protein_g}g Protein</Text>
+            <Text style={styles.macroText}>{item.fat_g}g Fat</Text>
+            <Text style={styles.macroText}>{item.carbs_g}g Carbs</Text>
+          </View>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -309,10 +387,30 @@ filterStrip: { height: 44, paddingHorizontal: 16, marginBottom: 8 },
   filterChipActive: { backgroundColor: Colors.pink, borderColor: Colors.pink },
   filterText: { fontSize: 12, color: '#666' },
   filterTextActive: { color: '#fff', fontWeight: '600' },
-  mealCard: {
+    mealCard: {
     flexDirection: 'row', backgroundColor: '#fafafa', borderRadius: 16,
     padding: 12, alignItems: 'center',
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+  },
+  swipeContainer: {
+    position: 'relative',
+  },
+  deleteButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: '#FF4D4D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   filterContainer: {
   flexDirection: 'row',

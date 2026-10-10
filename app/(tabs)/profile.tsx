@@ -67,7 +67,7 @@ const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // OBRISANO: fetch profila — sad dolazi iz context-a
+    // OBRISANO: fetch profila - sad dolazi iz context-a
 
     const today = new Date();
     const monday = new Date(today);
@@ -162,15 +162,15 @@ const fetchData = async () => {
         </View>
 
         <View style={styles.body}>
-          {/* GEJMIFIKACIJA — NIVO I POENI */}
+          {/* GEJMIFIKACIJA - NIVO I POENI */}
           <LevelProgressCard levelInfo={levelInfo} />
 
           
 
-          {/* GEJMIFIKACIJA — NIZ DANA ZAREDOM */}
+          {/* GEJMIFIKACIJA - NIZ DANA ZAREDOM */}
           <StreakCard currentStreak={currentStreak} longestStreak={longestStreak} />
 
-          {/* GEJMIFIKACIJA — KULINARSKI IZAZOVI */}
+          {/* GEJMIFIKACIJA - KULINARSKI IZAZOVI */}
           <ChallengesPreviewCard challengeLevels={challengeLevels} />
 
 
@@ -191,7 +191,7 @@ const fetchData = async () => {
               calorie goal, and 20 for your step goal.
             </Text>
 
-            {/* Bar chart — fixed 0–100 scale, exact score shown above each bar */}
+            {/* Bar chart - fixed 0–100 scale, exact score shown above each bar */}
             <View style={styles.chart}>
               {weeklyScores.map((item, index) => {
                 const barHeight = (item.score / 100) * 90;

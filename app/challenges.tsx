@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
 //                   <Ionicons name={selectedLevel.recipe.icon as any} size={36} color={Colors.white} />
 //                 </LinearGradient>
 
-//                 <Text style={styles.modalEyebrow}>Nivo {selectedLevel.level_number} — otključano</Text>
+//                 <Text style={styles.modalEyebrow}>Nivo {selectedLevel.level_number} - otključano</Text>
 //                 <Text style={styles.modalTitle}>{selectedLevel.recipe.title}</Text>
 //                 <Text style={styles.modalDesc}>{selectedLevel.recipe.description}</Text>
 

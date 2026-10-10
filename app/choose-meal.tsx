@@ -26,8 +26,8 @@ type Meal = {
 export default function ChooseMealScreen() {
   const router = useRouter();
   const { meal_type } = useLocalSearchParams<{ meal_type: string }>();
-  const { awardMealLogged } = useGamification(); 
-  
+  const { awardMealLogged, refreshTodayGoals } = useGamification();  
+
   console.log('meal_type received:', meal_type);
 
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -83,13 +83,15 @@ const handleAddMeal = async () => {
   console.log('insert error:', error);
 
   if (!error) {
-    // Gejmifikacija: +15 XP za ulogovan obrok + provera dostignuća.
-    if (insertedMeal) {
-      awardMealLogged(insertedMeal.id);
-    }
+  // Gejmifikacija: +15 XP za ulogovan obrok + provera dostignuća.
+  if (insertedMeal) {
+    await awardMealLogged(insertedMeal.id);
+  }
 
-    router.dismissAll();
-    router.setParams({ showModal: 'true' });
+  await refreshTodayGoals();
+
+  router.dismissAll();
+  router.setParams({ showModal: 'true' });
   }
 };
 

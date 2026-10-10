@@ -17,7 +17,7 @@ type Piece = {
 
 /**
  * Prikazuje kratku eksploziju konfeta preko cele trake (overlay), pa se sama
- * "gasi" — ne prima nikakve props osim `active`, koja pokreće novi krug
+ * "gasi" - ne prima nikakve props osim `active`, koja pokreće novi krug
  * animacije svaki put kad postane true (npr. kad modal postane vidljiv).
  */
 export function ConfettiOverlay({ active }: { active: boolean }) {

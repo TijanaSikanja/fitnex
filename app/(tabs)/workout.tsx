@@ -30,14 +30,25 @@ type Workout = {
   image_url: string;
 };
 
+type WorkoutHistoryEntry = {
+  id: string;
+  title: string;
+  workout_type: string | null;
+  duration_minutes: number | null;
+  calories_burned: number | null;
+  created_at: string;
+};
+
 export default function WorkoutScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('Strength');
   const [filteredWorkouts, setFilteredWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryTotal, setCategoryTotal] = useState(0);
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
-  const fetchWorkouts = async (category: string) => {
+    const fetchWorkouts = async (category: string) => {
     setLoading(true);
     const { data } = await supabase
       .from('workouts_catalog')
@@ -49,9 +60,41 @@ export default function WorkoutScreen() {
     setLoading(false);
   };
 
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setHistoryLoading(false);
+      return;
+    }
+    const { data } = await supabase
+      .from('workouts')
+      .select('id, title, workout_type, duration_minutes, calories_burned, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    setHistory(data || []);
+    setHistoryLoading(false);
+  };
+
+  const formatHistoryDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+
+    if (isSameDay(date, today)) return 'Today';
+    if (isSameDay(date, yesterday)) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchWorkouts(selectedCategory);
+      fetchHistory();
     }, [selectedCategory])
   );
 
@@ -67,9 +110,7 @@ export default function WorkoutScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Workouts</Text>
-          <TouchableOpacity style={styles.searchBtn}>
-            <Ionicons name="search-outline" size={22} color="#333" />
-          </TouchableOpacity>
+         
         </View>
 
         {/* Category Cards */}
@@ -175,6 +216,41 @@ export default function WorkoutScreen() {
               </TouchableOpacity>
             ))
           )}
+</View>
+
+        {/* WORKOUT HISTORY */}
+        <View style={[styles.section, { marginTop: 20 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle} >Workout History</Text>
+            <Text style={styles.seeAllGray}>{history.length} logged</Text>
+          </View>
+
+          {historyLoading ? (
+            <ActivityIndicator color={Colors.pink} style={{ marginTop: 20 }} />
+          ) : history.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📋</Text>
+              <Text style={styles.emptyText}>No workouts completed yet.</Text>
+              <Text style={styles.emptySubText}>Start one above to see it show up here.</Text>
+            </View>
+          ) : (
+            history.map((entry) => (
+              <View key={entry.id} style={styles.historyRow}>
+                <View style={styles.historyIcon}>
+                  <Ionicons name="checkmark-done" size={18} color={Colors.pink} />
+                </View>
+                <View style={styles.workoutInfo}>
+                  <Text style={styles.workoutTitle}>{entry.title}</Text>
+                  <Text style={styles.workoutMeta}>
+                    {entry.duration_minutes ? `${entry.duration_minutes} min` : ''}
+                    {entry.duration_minutes && entry.calories_burned ? ' • ' : ''}
+                    {entry.calories_burned ? `${entry.calories_burned} kcal` : ''}
+                  </Text>
+                </View>
+                <Text style={styles.historyDate}>{formatHistoryDate(entry.created_at)}</Text>
+              </View>
+            ))
+          )}
         </View>
 
         <View style={{ height: 24 }} />
@@ -223,6 +299,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
   },
+  historyRow: {
+   
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  historyIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.lightPink, alignItems: 'center', justifyContent: 'center',
+  },
+  historyDate: { fontSize: 12, color: '#aaa', fontWeight: '600' },
   workoutThumb: { width: 68, height: 68, borderRadius: 16, backgroundColor: '#f0f0f0' },
   workoutInfo: { flex: 1 },
   workoutTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 3 },

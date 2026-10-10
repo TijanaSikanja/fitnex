@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Dimensions,
   Alert,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { router } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
 import { supabase } from '../../services/supabase';
+import { useProfile } from '../../context/PorifleProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -31,10 +33,12 @@ const ACTIVITY_LEVELS = [
 ];
 
 export default function SetupProfile() {
+  const { refreshProfile } = useProfile();
+
   const [step, setStep] = useState(1);
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
+const [age, setAge] = useState('25');
+const [weight, setWeight] = useState('70');
+const [height, setHeight] = useState('170');
   const [gender, setGender] = useState('');
   const [goal, setGoal] = useState('');
   const [activityLevel, setActivityLevel] = useState('');
@@ -81,7 +85,7 @@ export default function SetupProfile() {
         .update({
           age: parseInt(age),
           weight: parseFloat(weight),
-          height: parseFloat(height),
+          height: parseFloat(height),  
           daily_calorie_goal: calories,
           goal: goal,
           activity_level: activityLevel,
@@ -90,6 +94,7 @@ export default function SetupProfile() {
         .eq('id', user.id);
 
       if (error) throw error;
+      await refreshProfile();
 
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -99,46 +104,71 @@ export default function SetupProfile() {
     }
   };
 
-  const NumberSelector = ({
-    value,
-    onChange,
-    min,
-    max,
-    unit,
-    label,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    min: number;
-    max: number;
-    unit: string;
-    label: string;
-  }) => {
-    const num = parseInt(value) || min;
-    return (
-      <View style={styles.numberSelector}>
-        <Text style={styles.numberLabel}>{label}</Text>
-        <View style={styles.numberControls}>
-          <TouchableOpacity
-            style={styles.numberButton}
-            onPress={() => num > min && onChange(String(num - 1))}
-          >
-            <Text style={styles.numberButtonText}>−</Text>
-          </TouchableOpacity>
-          <View style={styles.numberDisplay}>
-            <Text style={styles.numberValue}>{num}</Text>
-            <Text style={styles.numberUnit}>{unit}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.numberButton}
-            onPress={() => num < max && onChange(String(num + 1))}
-          >
-            <Text style={styles.numberButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+ const NumberSelector = ({
+  value,
+  onChange,
+  min,
+  max,
+  unit,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  min: number;
+  max: number;
+  unit: string;
+  label: string;
+}) => {
+  const num = parseInt(value) || min;
+
+  const handleTextChange = (text: string) => {
+    // dozvoli samo cifre dok korisnik kuca
+    const cleaned = text.replace(/[^0-9]/g, '');
+    onChange(cleaned);
   };
+
+  const handleBlur = () => {
+    const n = parseInt(value);
+    if (isNaN(n)) onChange(String(min));
+    else if (n < min) onChange(String(min));
+    else if (n > max) onChange(String(max));
+  };
+
+  return (
+    <View style={styles.numberSelector}>
+      <Text style={styles.numberLabel}>{label}</Text>
+      <View style={styles.numberControls}>
+        <TouchableOpacity
+          style={styles.numberButton}
+          onPress={() => onChange(String(Math.max(min, num - 1)))}
+        >
+          <Text style={styles.numberButtonText}>−</Text>
+        </TouchableOpacity>
+
+        <View style={styles.numberDisplay}>
+          <TextInput
+            style={styles.numberInput}
+            value={value}
+            onChangeText={handleTextChange}
+            onBlur={handleBlur}
+            keyboardType="number-pad"
+            maxLength={3}
+            selectTextOnFocus
+            textAlign="center"
+          />
+          <Text style={styles.numberUnit}>{unit}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.numberButton}
+          onPress={() => onChange(String(Math.min(max, num + 1)))}
+        >
+          <Text style={styles.numberButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
   return (
     <LinearGradient
@@ -160,7 +190,7 @@ export default function SetupProfile() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* STEP 1 — Osnovni podaci */}
+        {/* STEP 1 - Osnovni podaci */}
         {step === 1 && (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Let's get to know you! 👋</Text>
@@ -209,7 +239,7 @@ export default function SetupProfile() {
           </View>
         )}
 
-        {/* STEP 2 — Cilj */}
+        {/* STEP 2 - Cilj */}
         {step === 2 && (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>What's your goal? 🎯</Text>
@@ -229,7 +259,7 @@ export default function SetupProfile() {
           </View>
         )}
 
-        {/* STEP 3 — Fizička aktivnost */}
+        {/* STEP 3 - Fizička aktivnost */}
         {step === 3 && (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Activity Level 💪</Text>
@@ -369,6 +399,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  numberInput: {
+  fontSize: 36,
+  fontWeight: '800',
+  color: Colors.white,
+  minWidth: 70,
+  padding: 0,
+},
   numberButton: {
     width: 48,
     height: 48,

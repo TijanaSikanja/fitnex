@@ -13,7 +13,7 @@ import {
   STREAK_MILESTONES,
 } from '../services/gamification';
 
-/** Synthetic "achievement-like" object for streak celebrations — doesn't
+/** Synthetic "achievement-like" object for streak celebrations - doesn't
  * exist in the DB, built client-side when current_streak crosses one of
  * STREAK_MILESTONES, rendered through the same StreakMilestoneModal shape
  * as real achievements. */

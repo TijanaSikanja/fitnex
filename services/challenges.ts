@@ -23,7 +23,7 @@ export type ChallengeLevel = {
 
 export type ChallengeLevelWithStatus = ChallengeLevel & {
   unlocked: boolean;
-  isCurrent: boolean; // prvi zaključan nivo — "ti si ovde"
+  isCurrent: boolean; // prvi zaključan nivo - "ti si ovde"
 };
 
 export type FriendChallengeProgress = {

@@ -49,10 +49,10 @@ export const ROUTINES: Record<string, RoutineContent> = {
     color: '#E5E0FF',
     icon: { name: 'sparkles', set: 'ionicons' },
     intro:
-      "We're building out a full library of routines tailored to your goals — strength, recovery, hydration, sleep, and more. Until that's ready, here are a few simple habits that work for everyone, any day of the week.",
+      "We're building out a full library of routines tailored to your goals - strength, recovery, hydration, sleep, and more. Until that's ready, here are a few simple habits that work for everyone, any day of the week.",
     tips: [
       'Drink a glass of water first thing in the morning to kickstart your metabolism.',
-      'Aim for 7-9 hours of sleep — recovery is where progress actually happens.',
+      'Aim for 7-9 hours of sleep - recovery is where progress actually happens.',
       "Move for at least 20 minutes daily, even if it's just a walk.",
       "Plan tomorrow's meals tonight so you're never caught off guard.",
       'Celebrate small wins. Consistency beats intensity.',

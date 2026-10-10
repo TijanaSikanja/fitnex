@@ -52,7 +52,7 @@ export default function AIChatScreen() {
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  // Ako se otvara postojeći chat — učitaj poruke
+  // Ako se otvara postojeći chat - učitaj poruke
   useEffect(() => {
     if (conversationId) {
       loadExistingChat(conversationId);
@@ -250,7 +250,7 @@ export default function AIChatScreen() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
-        {/* Quick replies — samo na početku */}
+        {/* Quick replies - samo na početku */}
         {messages.length <= 1 && (
           <View style={styles.quickReplies}>
             {QUICK_REPLIES.map((qr) => (
